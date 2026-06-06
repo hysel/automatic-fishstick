@@ -182,6 +182,25 @@ one GPU vendor.
 | Disk | ~20 GB for WebUI + models |
 | RAM | 16 GB minimum; 32 GB recommended |
 
+### Distro Compatibility
+
+**Ubuntu-only.** This script uses `apt`/`dpkg` exclusively and is not compatible with other Linux distributions without significant porting effort.
+
+**Why Ubuntu-only?**
+- Package manager hardcoded to `apt` (no `dnf`/`pacman`/`zypper` abstraction)
+- System dependencies (libgl1, libffi-dev, nginx) use Ubuntu package names
+- ROCm installation downloads Ubuntu-specific `.deb` packages
+- Python 3.10 installation via `apt`
+
+**Other distros?**
+A Fedora, Arch, or openSUSE port would require:
+1. Package manager detection and abstraction layer
+2. Per-distro package name mappings (e.g., `libgl1` → `libGL` on Fedora)
+3. ROCm repo URL updates for non-Ubuntu distros
+4. Testing on target distros
+
+Contributions to add multi-distro support are welcome.
+
 ---
 
 ## Installation

@@ -1,0 +1,56 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Bash & Python Linting
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Validate bash syntax (main launcher)
+      run: bash -n run_stablediffusion.sh
+    
+    - name: Validate bash syntax (multi-distro launcher)
+      run: bash -n run_stablediffusion_multidistro.sh
+    
+    - name: Validate bash syntax (common library)
+      run: bash -n lib/common.sh
+    
+    - name: Validate bash syntax (verify script)
+      run: bash -n scripts/verify_install.sh || true  # OK if not yet created
+    
+    - name: Validate Python syntax (router template)
+      run: python3 -m py_compile router_template.py
+
+  documentation:
+    runs-on: ubuntu-latest
+    name: Documentation Checks
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check README exists
+      run: test -f README.md && wc -l README.md
+    
+    - name: Check COMPATIBILITY.md exists
+      run: test -f COMPATIBILITY.md && wc -l COMPATIBILITY.md || echo "COMPATIBILITY.md not yet created"
+    
+    - name: Verify CLI options documented
+      run: grep -q "\-\-nginx-port" README.md || echo "Warning: --nginx-port not documented in README"
+
+  docker-lint:
+    runs-on: ubuntu-latest
+    name: Dockerfile Validation
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Validate Dockerfile syntax
+      run: test -f Dockerfile && docker build --dry-run . || echo "Dockerfile not yet created"

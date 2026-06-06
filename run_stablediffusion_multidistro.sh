@@ -97,6 +97,7 @@ PID_FILE="/tmp/sd_webui_pids"
 ROUTER_PID_FILE="/tmp/sd_router_pid"
 BASE_PORT=7860
 ROUTER_PORT=8080
+NGINX_PORT=8888
 PYTHON_BIN=""
 
 GPU_ENTRIES=()
@@ -512,15 +513,32 @@ main() {
   detect_distro
   detect_package_manager
   
-  # Parse --webui-dir option if provided
-  if [[ "${1:-}" == "--webui-dir" ]]; then
-    if [[ -z "${2:-}" ]]; then
-      error "--webui-dir requires a path argument"
-    fi
-    WEBUI_DIR="$2"
-    VENV_DIR="$WEBUI_DIR/venv"
-    shift 2
-  fi
+  # Parse --webui-dir and --nginx-port options if provided
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --webui-dir)
+        if [[ -z "${2:-}" ]]; then
+          error "--webui-dir requires a path argument"
+        fi
+        WEBUI_DIR="$2"
+        VENV_DIR="$WEBUI_DIR/venv"
+        shift 2
+        ;;
+      --nginx-port)
+        if [[ -z "${2:-}" ]]; then
+          error "--nginx-port requires a port number argument"
+        fi
+        NGINX_PORT="$2"
+        if ! [[ "$NGINX_PORT" =~ ^[0-9]+$ ]] || [ "$NGINX_PORT" -lt 1024 ] || [ "$NGINX_PORT" -gt 65535 ]; then
+          error "Invalid port number: $NGINX_PORT (must be 1024-65535)"
+        fi
+        shift 2
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
   
   case "${1:-}" in
     --help|-h)   usage ;;

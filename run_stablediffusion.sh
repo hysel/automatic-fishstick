@@ -144,6 +144,7 @@ PID_FILE="/tmp/sd_webui_pids"             # Tracks WebUI process IDs for --stop
 ROUTER_PID_FILE="/tmp/sd_router_pid"      # Tracks router process ID for --stop
 BASE_PORT=7860                             # GPU 0 = 7860, GPU 1 = 7861, etc.
 ROUTER_PORT=8080                           # Smart router listens here
+NGINX_PORT=8888                             # nginx reverse proxy listens here (use --nginx-port to override)
 PYTHON_BIN=""                              # Resolved by detect_python()
 
 # GPU inventory arrays -- populated by detect_all_gpus()
@@ -214,6 +215,10 @@ Usage: $0 [OPTION] [ARGS]
                     (default: $HOME/stable-diffusion-webui)
                     Use with --install or other commands, e.g.:
                       $0 --webui-dir /mnt/gpu-storage/sd --install
+
+  --nginx-port NUM  Custom port for nginx reverse proxy
+                    (default: 8888, must be 1024-65535 and not in use)
+                    Example: $0 --nginx-port 9000 --install
 
   --help        Show this message.
 
@@ -1325,14 +1330,14 @@ stop_router() {
 
 configure_nginx() {
   command -v nginx &>/dev/null || { info "nginx not installed -- skipping"; return; }
-  remark "nginx -> router:${ROUTER_PORT} -> WebUI instances"
+  remark "nginx -> router:${ROUTER_PORT} -> WebUI instances on port ${NGINX_PORT}"
 
   local nginx_conf
   printf -v nginx_conf '%s
 ' \
     "upstream sd_router { server 127.0.0.1:${ROUTER_PORT}; }" \
     "server {" \
-    "    listen 80; server_name localhost; client_max_body_size 50M;" \
+    "    listen ${NGINX_PORT}; server_name localhost; client_max_body_size 50M;" \
     "    location / {" \
     "        proxy_pass http://sd_router; proxy_http_version 1.1;" \
     '        proxy_set_header Upgrade $http_upgrade;' \
@@ -1400,7 +1405,7 @@ launch_all() {
   echo -e "  ${BOLD}Architecture:${NC}"
   echo -e "    Browser / API"
   echo -e "         |"
-  echo -e "    ${CYAN}nginx :80${NC}        (public, optional)"
+  echo -e "    ${CYAN}nginx :${NGINX_PORT}${NC}        (public, optional)"
   echo -e "         |"
   echo -e "    ${GREEN}Router :${ROUTER_PORT}${NC}     (GPU selection, VRAM check, queue)"
   echo -e "         |"
@@ -1650,17 +1655,37 @@ run_install() {
 main() {
   print_banner
   
-  # Parse --webui-dir option if provided
-  if [[ "$1" == "--webui-dir" ]]; then
-    if [[ -z "$2" ]]; then
-      error "--webui-dir requires a path argument"
-      usage
-      exit 1
-    fi
-    WEBUI_DIR="$2"
-    VENV_DIR="$WEBUI_DIR/venv"
-    shift 2  # Remove both --webui-dir and the path from arguments
-  fi
+  # Parse --webui-dir and --nginx-port options if provided
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --webui-dir)
+        if [[ -z "${2:-}" ]]; then
+          error "--webui-dir requires a path argument"
+          usage
+          exit 1
+        fi
+        WEBUI_DIR="$2"
+        VENV_DIR="$WEBUI_DIR/venv"
+        shift 2
+        ;;
+      --nginx-port)
+        if [[ -z "${2:-}" ]]; then
+          error "--nginx-port requires a port number argument"
+          usage
+          exit 1
+        fi
+        NGINX_PORT="$2"
+        # Validate port number (basic check)
+        if ! [[ "$NGINX_PORT" =~ ^[0-9]+$ ]] || [ "$NGINX_PORT" -lt 1024 ] || [ "$NGINX_PORT" -gt 65535 ]; then
+          error "Invalid port number: $NGINX_PORT (must be 1024-65535)"
+        fi
+        shift 2
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
   
   case "${1:-}" in
     --help|-h)   usage ;;

@@ -260,8 +260,9 @@ to a specific GPU at `http://localhost:786N`.
 ## Usage
 
 ```
-./run_stablediffusion.sh [OPTION]
+./run_stablediffusion.sh [OPTIONS]
 
+Core Commands:
   (no option)   Launch all GPU instances + smart router
   --install     Full first-time setup
   --update      Pull latest WebUI commits + reinstall Python deps
@@ -269,16 +270,37 @@ to a specific GPU at `http://localhost:786N`.
   --diag        Show GPU hardware, PyTorch, and router health report
   --uninstall   Remove everything installed by this script (with confirmation)
   --help        Show usage
+
+Options (can combine with commands):
+  --webui-dir PATH       Install AUTOMATIC1111 to custom location
+                         (default: $HOME/stable-diffusion-webui)
+  --nginx-port NUM       nginx reverse proxy port number
+                         (default: 8888, must be 1024-65535 and available)
 ```
 
-### Examples
+### CLI Examples
 
 ```bash
+# Full install with default paths (Ubuntu only)
+./run_stablediffusion.sh --install
+
+# Install to custom directory on fast NVMe storage
+./run_stablediffusion.sh --webui-dir /mnt/nvme/stable-diffusion --install
+
+# Install with custom nginx port (e.g., 9000 instead of 8888)
+./run_stablediffusion.sh --nginx-port 9000 --install
+
+# Combine options: custom location + custom nginx port
+./run_stablediffusion.sh --webui-dir /mnt/data/sd --nginx-port 9000 --install
+
 # Check what GPUs are detected and what flags they will get
 ./run_stablediffusion.sh --diag
 
 # Pull the latest SD WebUI and reinstall matching deps
 ./run_stablediffusion.sh --update
+
+# Stop all running instances
+./run_stablediffusion.sh --stop
 
 # Watch all GPU logs at once
 tail -f ~/sd-logs/gpu*.log ~/sd-logs/router.log
@@ -286,10 +308,16 @@ tail -f ~/sd-logs/gpu*.log ~/sd-logs/router.log
 # Check router status (JSON fleet report)
 curl http://localhost:8080/router/status | python3 -m json.tool
 
+# Query nginx (if configured on port 8888)
+curl http://localhost:8888/router/status | python3 -m json.tool
+
 # Access a specific GPU directly (bypass router)
-# GPU 0 (V100):     http://localhost:7860
-# GPU 1 (RTX 5000): http://localhost:7861
-# GPU 2 (V100):     http://localhost:7862
+# GPU 0:     http://localhost:7860
+# GPU 1:     http://localhost:7861
+# GPU 2:     http://localhost:7862
+
+# Verify installation is complete
+./scripts/verify_install.sh --webui-dir /mnt/data/sd --nginx-port 9000
 ```
 
 ---
@@ -868,11 +896,21 @@ This performs a complete reset while keeping your GPU drivers intact.
 
 ```
 stable-diffusion-multigpu/
-├── run_stablediffusion.sh    # Main launcher (27 sections, ~1,670 lines)
-├── router_template.py        # FastAPI smart router template (~360 lines)
-├── README.md                 # This file
-├── .gitignore                # Excludes generated dirs and venvs
-└── LICENSE                   # MIT
+├── run_stablediffusion.sh           # Main launcher (Ubuntu/Debian, ~1,690 lines)
+├── run_stablediffusion_multidistro.sh  # Multi-distro experimental launcher (~550 lines)
+├── router_template.py               # FastAPI smart router template (~360 lines)
+├── lib/
+│   └── common.sh                    # Shared utility functions
+├── scripts/
+│   └── verify_install.sh            # Post-install validation script
+├── .github/workflows/
+│   └── test.yml                     # CI/CD pipeline (bash/Python linting)
+├── README.md                        # This file
+├── COMPATIBILITY.md                 # Distro, GPU, and PyTorch compatibility matrix
+├── MULTIDISTRO.md                   # Multi-distro porting roadmap
+├── .prompt.md                       # Enhancement guide (internal reference)
+├── .gitignore                       # Excludes generated dirs and venvs
+└── LICENSE                          # MIT
 ```
 
 At runtime, the following directories are created (not tracked by git):
@@ -882,6 +920,44 @@ At runtime, the following directories are created (not tracked by git):
 ~/sd-router/                  # Generated router.py + its venv
 ~/sd-logs/                    # gpu0.log, gpu1.log, ..., router.log
 ```
+
+---
+
+## Verification & Compatibility
+
+### Post-Installation Verification
+
+After running `--install`, validate your setup with:
+
+```bash
+./scripts/verify_install.sh
+```
+
+This checks:
+- WebUI clone and git repository
+- Python virtual environment
+- PyTorch and CUDA/ROCm installation
+- Smart router configuration
+- System dependencies
+- Port availability
+- GPU detection
+
+### Compatibility Matrix
+
+For detailed information on supported distros, GPUs, and PyTorch versions, see:
+- **[COMPATIBILITY.md](COMPATIBILITY.md)** — Comprehensive compatibility matrix
+- **[MULTIDISTRO.md](MULTIDISTRO.md)** — Multi-distro experimental launcher status
+
+### Multi-Distro Support
+
+Ubuntu/Debian users: Use `run_stablediffusion.sh` (production-ready)  
+Other distros: Try `run_stablediffusion_multidistro.sh` (experimental)
+
+```bash
+./run_stablediffusion_multidistro.sh --install
+```
+
+See [MULTIDISTRO.md](MULTIDISTRO.md) for supported distros and known limitations.
 
 ---
 

@@ -51,7 +51,7 @@ and queue depth.
   generation request and routes to the optimal GPU
 - **VRAM-aware routing** — queries `nvidia-smi` in real time before each
   request; GPUs without enough free VRAM are skipped
-- **nginx integration** — optional reverse proxy on port 80 with WebSocket
+- **nginx integration** — optional reverse proxy on port 8888 with WebSocket
   support for SD live preview
 - **Clean uninstall** — `--uninstall` removes everything with a confirmation
   prompt; drivers and system Python are never touched
@@ -63,7 +63,7 @@ and queue depth.
 ```
 Browser / API Client
         |
-   nginx :80          (optional public-facing proxy)
+   nginx :8888        (optional public-facing proxy)
         |
    Smart Router :8080 (GPU selection, VRAM check, queue depth)
         |
@@ -435,7 +435,7 @@ tail -f ~/sd-logs/gpu0.log
 | 7861 | GPU 1 — direct WebUI | Bypass router |
 | 7862 | GPU 2 — direct WebUI | Bypass router |
 | 8080 | Smart router | Use this for all API calls and browser |
-| 80 | nginx | Optional; proxies to router |
+| 8888 | nginx | Optional; proxies to router |
 
 Ports 7860+ increment automatically for however many GPUs are detected.
 

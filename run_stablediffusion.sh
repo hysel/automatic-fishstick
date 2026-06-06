@@ -131,6 +131,9 @@ set -euo pipefail
 # =============================================================================
 # All paths and ports are defined here. Change these if you want to install
 # to a different location or use different ports.
+# 
+# Note: WEBUI_DIR can be overridden via --webui-dir command-line option:
+#   ./run_stablediffusion.sh --webui-dir /custom/path --install
 
 WEBUI_DIR="$HOME/stable-diffusion-webui"   # Where AUTOMATIC1111 is cloned
 VENV_DIR="$WEBUI_DIR/venv"                 # Python virtualenv for WebUI deps
@@ -188,7 +191,7 @@ print_banner() {
 
 usage() {
   cat <<EOF
-Usage: $0 [OPTION]
+Usage: $0 [OPTION] [ARGS]
 
   --install     Full first-time setup
                   Detects all GPU vendors, installs the correct PyTorch build,
@@ -206,6 +209,11 @@ Usage: $0 [OPTION]
   --uninstall   Interactively remove everything installed by this script.
                   Prompts for confirmation before deleting. Does NOT remove
                   CUDA drivers, ROCm, or system Python.
+
+  --webui-dir PATH  Custom installation path for AUTOMATIC1111 WebUI
+                    (default: $HOME/stable-diffusion-webui)
+                    Use with --install or other commands, e.g.:
+                      $0 --webui-dir /mnt/gpu-storage/sd --install
 
   --help        Show this message.
 
@@ -1641,6 +1649,19 @@ run_install() {
 # =============================================================================
 main() {
   print_banner
+  
+  # Parse --webui-dir option if provided
+  if [[ "$1" == "--webui-dir" ]]; then
+    if [[ -z "$2" ]]; then
+      error "--webui-dir requires a path argument"
+      usage
+      exit 1
+    fi
+    WEBUI_DIR="$2"
+    VENV_DIR="$WEBUI_DIR/venv"
+    shift 2  # Remove both --webui-dir and the path from arguments
+  fi
+  
   case "${1:-}" in
     --help|-h)   usage ;;
     --install)   run_install ;;
